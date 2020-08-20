@@ -62,7 +62,7 @@
 #' If sp_adj = TRUE, matrix of the genotype BLUEs with the genotype in row
 #' and the day (or measurement time) in column.
 #'
-#' @author Vincent Garin, Soumyashree Kar
+#' @author Soumyashree Kar, Vincent Garin
 #' 
 #' @references
 #' 

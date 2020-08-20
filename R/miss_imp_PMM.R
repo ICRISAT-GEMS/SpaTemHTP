@@ -16,7 +16,7 @@
 #' 
 #' \code{data.frame} with missing values imputed.
 #'
-#' @author Vincent Garin, Soumyashree Kar
+#' @author Soumyashree Kar, Vincent Garin
 #'
 #' @references
 #' 

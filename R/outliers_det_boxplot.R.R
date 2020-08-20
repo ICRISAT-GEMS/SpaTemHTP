@@ -19,7 +19,7 @@
 #' 
 #' \code{data.frame} with outlying values put as NA.
 #'
-#' @author Vincent Garin, Soumyashree Kar
+#' @author Soumyashree Kar, Vincent Garin
 #'
 #' @references
 #' 
