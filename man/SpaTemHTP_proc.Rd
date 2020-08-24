@@ -10,6 +10,9 @@ SpaTemHTP_proc(
   out_det = TRUE,
   miss_imp = TRUE,
   sp_adj = TRUE,
+  single_mixed_model = FALSE,
+  out_p_val = 0.05,
+  print_day = TRUE,
   fixed = NULL,
   random = ~row_f + col_f,
   plot = TRUE
@@ -37,6 +40,16 @@ should be performed on the phenotypic data. Default = TRUE.}
 \item{sp_adj}{\code{Logical} value specifying if a mixed model with spatial
 adjustment (SpATS model) should be used to calculate the genotype BLUEs.
 Default = TRUE.}
+
+\item{single_mixed_model}{\code{Logical} value indicating if a 'single-step'
+mixed model should be calculated. See Details for more explanations.
+Default = FALSE.}
+
+\item{out_p_val}{\code{Numeric} value indicating the signficance threshold
+for outliers detection. Default = 0.05.}
+
+\item{print_day}{\code{Logical} value indicating if the day progression should
+be printed. Default = TRUE.}
 
 \item{fixed}{Optional right hand formula object specifying the fixed effects
 of the SpATS model. Default = NULL.}
@@ -74,6 +87,11 @@ The user can run a different model using the fixed and random arguments
 that specifies the fixed and random part of the mixed model used to
 calculate the genotypes BLUEs. The spatially adjusted model are fitted
 using function from the SpATS package (Rodgriguez-Alvarez et al., 2018).
+
+If single_mixed_model = TRUE, the function calculates a single-step mixed
+model where outliers are iteratively removed based on the model residuals
+and the missing values imputed during the estimation procedure. The outliers
+are detected using a Grubb Test (p<0.05, default).
 }
 \examples{
 
@@ -105,5 +123,5 @@ experiments with P-splines. Spatial Statistics 23 52 - 71
 URL https://doi.org/10.1016/j.spasta.2017.10.003
 }
 \author{
-Vincent Garin, Soumyashree Kar
+Soumyashree Kar, Vincent Garin
 }

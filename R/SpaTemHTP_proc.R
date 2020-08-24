@@ -18,7 +18,11 @@
 #' calculate the genotypes BLUEs. The spatially adjusted model are fitted
 #' using function from the SpATS package (Rodgriguez-Alvarez et al., 2018).
 #' 
-#'
+#' If single_mixed_model = TRUE, the function calculates a single-step mixed
+#' model where outliers are iteratively removed based on the model residuals
+#' and the missing values imputed during the estimation procedure. The outliers
+#' are detected using a Grubb Test (p<0.05, default).
+#' 
 #' @param exp_des_data \code{data.frame} of dimension (N_genotype * N_replicate)
 #' x N_variable containing the experimental design information. It must include:
 #' a) a 'genotype' column representing the line phenotyped;
@@ -40,6 +44,16 @@
 #' @param sp_adj \code{Logical} value specifying if a mixed model with spatial
 #' adjustment (SpATS model) should be used to calculate the genotype BLUEs.
 #' Default = TRUE.
+#' 
+#' @param single_mixed_model \code{Logical} value indicating if a 'single-step'
+#' mixed model should be calculated. See Details for more explanations.
+#' Default = FALSE.
+#' 
+#' @param out_p_val \code{Numeric} value indicating the signficance threshold
+#' for outliers detection. Default = 0.05.
+#' 
+#' @param print_day \code{Logical} value indicating if the day progression should
+#' be printed. Default = TRUE.
 #' 
 #' @param fixed Optional right hand formula object specifying the fixed effects
 #' of the SpATS model. Default = NULL.
@@ -98,10 +112,36 @@
 #'
 
 
+
+# data(SG_PH_data)
+# 
+# SG_PH_data$col_f <- factor(SG_PH_data$col)
+# SG_PH_data$row_f <- factor(SG_PH_data$row)
+# 
+# SG_PH_data$rep <- factor(SG_PH_data$rep)
+# SG_PH_data$block <- factor(SG_PH_data$block)
+# 
+# exp_des_data = SG_PH_data[, c("row", "col", "row_f", "col_f","genotype",
+#                               "rep", "block")]
+# 
+# ## Not run: 
+# 
+# pheno_data = SG_PH_data[, 6:7]
+# random = ~ rep +  rep:block + row_f + col_f
+# single_mixed_model = TRUE
+# plot = TRUE
+# 
+# out_p_val = 0.05
+# print_day = TRUE
+# fixed = NULL
+
+
 SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
                            miss_imp = TRUE, sp_adj = TRUE,
-                           fixed = NULL, random = ~ row_f + col_f,
-                           plot = TRUE) {
+                           single_mixed_model = FALSE,
+                           out_p_val = 0.05, print_day = TRUE,
+                           fixed = NULL,
+                           random = ~ row_f + col_f, plot = TRUE) {
   
   # Check if specified column were included in the experimental design
   # with the right format.
@@ -162,88 +202,195 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
   geno_id <- as.character(geno_id)
   n_geno <- length(geno_id)
   
-  # Outliers detection
-  if(out_det) {
-    
-    pheno_data <- outliers_det_boxplot(data = pheno_data)
-    
-  }
+  # Space to store the results
   
-  # Missing values imputation
-  if(miss_imp){
-    
-    pheno_data <- miss_imp_PMM(data = pheno_data)
-    
-  }
+  G_BLUES_mat <- matrix(NA, nrow = n_geno, ncol = n_days)
   
-  # Genotype BLUEs computation
-  
-  if(!sp_adj){
+  if(!single_mixed_model){ # Regular pipeline procedure
     
-    # Mixed model without spatial adjustment not available now
-    
-    data <- cbind.data.frame(exp_des_data, pheno_data)
-    
-    return(data)
-    
-  } else {
-    
-    # SpATS model with spatial adjustment
-    
-    # transform variable into factor
-    
-    exp_des_data$genotype <- factor(exp_des_data$genotype)
-    
-    if(!is.null(fixed)){fixed <- as.formula(fixed)}
-    
-    # Space to store the results
-    
-    G_BLUES_mat <- matrix(NA, nrow = n_geno, ncol = n_days)
-    
-    for(i in 1:dim(pheno_data)[2]){
+    # Outliers detection
+    if(out_det) {
       
-      data <- cbind.data.frame(exp_des_data, pheno_data[, i])
-      colnames(data)[dim(data)[2]] <- 'pheno'
+      pheno_data <- outliers_det_boxplot(data = pheno_data)
       
-      m <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
-                          geno.decomp = NULL, genotype.as.random = FALSE,
-                          spatial = ~PSANOVA(col, row, nseg = c(20,20)),
-                          fixed = fixed,
-                          random = as.formula(random),
-                          data = data,
-                          control = list(maxit = 50, tolerance = 1e-06, monitoring = 1)),
-                    error = function(e) NULL)
+    }
+    
+    # Missing values imputation
+    if(miss_imp){
       
-      if(!is.null(m)){
+      pheno_data <- miss_imp_PMM(data = pheno_data)
+      
+    }
+    
+    # Genotype BLUEs computation
+    
+    if(!sp_adj){
+      
+      # Mixed model without spatial adjustment not available now
+      
+      data <- cbind.data.frame(exp_des_data, pheno_data)
+      
+      return(data)
+      
+    } else {
+      
+      # SpATS model with spatial adjustment
+      
+      # transform variable into factor
+      
+      exp_des_data$genotype <- factor(exp_des_data$genotype)
+      
+      if(!is.null(fixed)){fixed <- as.formula(fixed)}
+      
+      day_ind <- 1
+      
+      for(i in 1:dim(pheno_data)[2]){
         
-        pred <- predict(m, which = 'genotype')
-        BLUE_i <- pred$predicted.values
-        names(BLUE_i) <- as.character(pred$genotype)
+        data <- cbind.data.frame(exp_des_data, pheno_data[, i])
+        colnames(data)[dim(data)[2]] <- 'pheno'
         
-        BLUE_i <- BLUE_i[geno_id]
-        G_BLUES_mat[, i] <- BLUE_i
+        m <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
+                            geno.decomp = NULL, genotype.as.random = FALSE,
+                            spatial = ~PSANOVA(col, row, nseg = c(20,20)),
+                            fixed = fixed,
+                            random = as.formula(random),
+                            data = data,
+                            control = list(maxit = 50, tolerance = 1e-06, monitoring = 1)),
+                      error = function(e) NULL)
+        
+        if(!is.null(m)){
+          
+          pred <- predict(m, which = 'genotype')
+          BLUE_i <- pred$predicted.values
+          names(BLUE_i) <- as.character(pred$genotype)
+          
+          BLUE_i <- BLUE_i[geno_id]
+          G_BLUES_mat[, i] <- BLUE_i
+          
+        }
+        
+        if(print_day){print(paste('day', day_ind))}
+        
+        day_ind <- day_ind + 1
+        
+        
         
       }
       
+      rownames(G_BLUES_mat) <- geno_id
+      colnames(G_BLUES_mat) <- day_id
+      
+      if(plot){ # plot the G-BLUEs time series
+        
+        dt <- data.frame(geno = rep(geno_id, n_days),
+                         day = rep(1:n_days, each = n_geno),
+                         trait = c(G_BLUES_mat))
+        
+        plot <- ggplot(data = dt, aes(x = day, y = trait, group = geno)) +
+          geom_point() + geom_line(aes(group = geno))
+        
+        print(plot)
+        
+      }
+      
+      return(G_BLUES_mat)
+      
     }
     
-    rownames(G_BLUES_mat) <- geno_id
-    colnames(G_BLUES_mat) <- day_id
+  } else { # Single-step mixed model
     
-    if(plot){ # plot the G-BLUEs time series
       
-      dt <- data.frame(geno = rep(geno_id, n_days),
-                       day = rep(1:n_days, each = n_geno),
-                       trait = c(G_BLUES_mat))
+      # transform variable into factor
       
-      plot <- ggplot(data = dt, aes(x = day, y = trait, group = geno)) +
-        geom_point() + geom_line(aes(group = geno))
+      exp_des_data$genotype <- factor(exp_des_data$genotype)
       
-      print(plot)
+      if(!is.null(fixed)){fixed <- as.formula(fixed)}
       
-    }
-    
-    return(G_BLUES_mat)
+      day_ind <- 1
+      
+      for(i in 1:dim(pheno_data)[2]){
+        
+        data <- cbind.data.frame(exp_des_data, pheno_data[, i])
+        colnames(data)[dim(data)[2]] <- 'pheno'
+        
+        p_val <- 0
+        
+        while(p_val < out_p_val){
+          
+          # compute the mixed model
+          
+          m <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
+                              geno.decomp = NULL, genotype.as.random = FALSE,
+                              spatial = ~PSANOVA(col, row, nseg = c(20,20)),
+                              fixed = fixed,
+                              random = as.formula(random),
+                              data = data,
+                              control = list(maxit = 50, tolerance = 1e-06, monitoring = 1)),
+                        error = function(e) NULL)
+          
+          # test null
+          
+          if(!is.null(m)){
+            
+            m_resid <- m$residuals
+            
+            test <- grubbs.test(m_resid, type = 10, two.sided = TRUE) # Grubb test
+            p_val <- test$p.value
+            
+            if(p_val < out_p_val){ # test if p_val is lower than ... (presence of an outlier)
+              
+              # remove the outlying value from the data
+              
+              pos_max_res <- which(abs(m_resid) == max(abs(m_resid), na.rm = TRUE))
+              
+              data$pheno[pos_max_res] <- NA
+              
+              
+            }
+            
+          } else{
+            
+            break()
+            
+          }
+          
+        }
+        
+        
+        if(!is.null(m)){
+          
+          pred <- predict(m, which = 'genotype')
+          BLUE_i <- pred$predicted.values
+          names(BLUE_i) <- as.character(pred$genotype)
+          
+          BLUE_i <- BLUE_i[geno_id]
+          G_BLUES_mat[, i] <- BLUE_i
+          
+        }
+        
+        if(print_day){print(paste('day', day_ind))}
+        
+        day_ind <- day_ind + 1
+        
+      }
+      
+      rownames(G_BLUES_mat) <- geno_id
+      colnames(G_BLUES_mat) <- day_id
+      
+      if(plot){ # plot the G-BLUEs time series
+        
+        dt <- data.frame(geno = rep(geno_id, n_days),
+                         day = rep(1:n_days, each = n_geno),
+                         trait = c(G_BLUES_mat))
+        
+        plot <- ggplot(data = dt, aes(x = day, y = trait, group = geno)) +
+          geom_point() + geom_line(aes(group = geno))
+        
+        print(plot)
+        
+      }
+      
+      return(G_BLUES_mat)
     
   }
   

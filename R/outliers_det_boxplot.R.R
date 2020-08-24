@@ -5,7 +5,7 @@
 #' Sequential outlier detection using Boxplot
 #'
 #' Detect outliers using boxplot method (Sun and Genton, 2011). For each day,
-#' the 25% quantile (QR1), 75% quantile (QR3), and 50% inter-quantile range (IQR)
+#' the 25\% quantile (QR1), 75\% quantile (QR3), and 50\% inter-quantile range (IQR)
 #' are calculated. The observations below QR1 - 1.5 x IQR or above QR3 + 1.5 x IQR
 #' are considered as outliers. Outliers are replaced by missing value.
 #'
@@ -36,6 +36,7 @@
 #'
 #' @import ggplot2
 #' @import mice
+#' @import outliers
 #' @import SpATS
 #' @import VIM
 #'

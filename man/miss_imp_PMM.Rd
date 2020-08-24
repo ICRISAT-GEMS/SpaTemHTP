@@ -44,5 +44,5 @@ adjusted weights and multiple imputations. Journal of Business & Economic
 Statistics, 4(1), 87-94.
 }
 \author{
-Vincent Garin, Soumyashree Kar
+Soumyashree Kar, Vincent Garin
 }
