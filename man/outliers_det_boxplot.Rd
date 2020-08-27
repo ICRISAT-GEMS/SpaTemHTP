@@ -31,7 +31,6 @@ data(SG_PH_data)
 
 data <- outliers_det_boxplot(data = SG_PH_data[, 6:28])
 
-
 }
 \references{
 Sun, Y. and Genton, M.G. (2011). Functional boxplots. Journal of
