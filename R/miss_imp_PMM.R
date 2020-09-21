@@ -12,6 +12,9 @@
 #' @param data \code{data.frame} of dimension (N_genotype * N_replicate) x N_days
 #' containing the measured phenotypic values.
 #' 
+#' @param plot \code{logical} value. If plot = TRUE, plot an overview of the
+#' missing values pattern. Default = TRUE.
+#' 
 #' @return Return:
 #' 
 #' \code{data.frame} with missing values imputed.
@@ -43,24 +46,26 @@
 #'
 
 
-miss_imp_PMM <- function(data){
-  #### Perform MICE and then repeat the below steps #####
+miss_imp_PMM <- function(data, plot = TRUE){
+  
   mice.ip<-data
-  mice_plot <- aggr(mice.ip, col=c('navyblue','yellow'),
-                    numbers=TRUE, sortVars=FALSE,
-                    labels=names(data), cex.axis=.7,
-                    gap=3, ylab=c("Missing data","Pattern"))
-  # Now, impute the missing values.
+  
+  # optional plot
+  if(plot){
+    
+    mice_plot <- aggr(mice.ip, col=c('navyblue','yellow'),
+                      numbers=TRUE, sortVars=FALSE,
+                      labels=names(data), cex.axis=.7,
+                      gap=3, ylab=c("Missing data","Pattern"))
+    
+  }
+  
+  # Impute the missing values.
   imputed_Data <- mice(mice.ip, m=5, maxit = 10, method = 'pmm', seed = 500,
                        printFlag = FALSE)
-  # summary(imputed_Data)
+  
   #check imputed values
   OP<-mice::complete(imputed_Data, 5, include = FALSE)
-  #mice_plot <- aggr(OP, col=c('navyblue','yellow'),
-  #                  numbers=TRUE, sortVars=FALSE,
-  #                  labels=names(OP), cex.axis=.7,
-  #                  gap=3, ylab=c("Missing data","Pattern"))
-  # DF <- OP # This is the imputed data to be used further 
   
   return(OP)
 }

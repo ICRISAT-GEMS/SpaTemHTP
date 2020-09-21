@@ -34,11 +34,15 @@
 #' data <- outliers_det_boxplot(data = SG_PH_data[, 6:28])
 #'
 #' @import drc
+#' @import ecp
 #' @import ggplot2
+#' @import kernlab
 #' @import mice
 #' @import outliers
 #' @import SpATS
+#' @import stats
 #' @import VIM
+#' @import xts
 #'
 #' @export
 #'

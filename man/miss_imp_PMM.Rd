@@ -4,11 +4,14 @@
 \alias{miss_imp_PMM}
 \title{Missing values imputation using PMM}
 \usage{
-miss_imp_PMM(data)
+miss_imp_PMM(data, plot = TRUE)
 }
 \arguments{
 \item{data}{\code{data.frame} of dimension (N_genotype * N_replicate) x N_days
 containing the measured phenotypic values.}
+
+\item{plot}{\code{logical} value. If plot = TRUE, plot an overview of the
+missing values pattern. Default = TRUE.}
 }
 \value{
 Return:

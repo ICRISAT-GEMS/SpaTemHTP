@@ -4,14 +4,19 @@ Version: 1.0.0
 Date: 2018-06-29
 Title: Processing and utilization of HTP data
 Author: Soumyashree Kar, Vincent Garin
-Maintainer: Vincent Garin <vincent.garin6@gmail.com>
+Maintainer: Vincent Garin <vincent.garin6@gmail.com>, Soumyashree Kar <ksoumya2301@gmail.com>
 Description: Processing and utilization of phenotypic data coming from high throughput phenotyping platforms.
 License: GPL-3
 Imports:
+    drc,
+    ecp,
     ggplot2,
     mice,
+    outliers,
     SpATS,
-    VIM
+    stats,
+    VIM,
+    xts
 Depends:
     R(>= 3.5)    
 Encoding: UTF-8

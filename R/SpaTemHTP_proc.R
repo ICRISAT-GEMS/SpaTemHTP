@@ -61,6 +61,9 @@
 #' @param random Optional right hand formula object specifying the random effects
 #' of the SpATS model. Default = ~ row_f + col_f.
 #' 
+#' @param h2_comp \code{Logical} value indicating if the should calculate the daily
+#' genotypic heritability. Default = FALSE.
+#' 
 #' @param plot \code{Logical} value specifying if a time series plot of the
 #' G-BLUEs should be produced. Default = TRUE.
 #' 
@@ -74,7 +77,8 @@
 #' (e.g. Genstat) to calculate the genotype BLUEs without spatial adjustment.
 #' 
 #' If sp_adj = TRUE, matrix of the genotype BLUEs with the genotype in row
-#' and the day (or measurement time) in column.
+#' and the day (or measurement time) in column. If h2 = TRUE, the function
+#' also return a vector with the daily genotypic heritability.
 #'
 #' @author Soumyashree Kar, Vincent Garin
 #' 
@@ -112,36 +116,12 @@
 #'
 
 
-
-# data(SG_PH_data)
-# 
-# SG_PH_data$col_f <- factor(SG_PH_data$col)
-# SG_PH_data$row_f <- factor(SG_PH_data$row)
-# 
-# SG_PH_data$rep <- factor(SG_PH_data$rep)
-# SG_PH_data$block <- factor(SG_PH_data$block)
-# 
-# exp_des_data = SG_PH_data[, c("row", "col", "row_f", "col_f","genotype",
-#                               "rep", "block")]
-# 
-# ## Not run: 
-# 
-# pheno_data = SG_PH_data[, 6:7]
-# random = ~ rep +  rep:block + row_f + col_f
-# single_mixed_model = TRUE
-# plot = TRUE
-# 
-# out_p_val = 0.05
-# print_day = TRUE
-# fixed = NULL
-
-
 SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
                            miss_imp = TRUE, sp_adj = TRUE,
                            single_mixed_model = FALSE,
                            out_p_val = 0.05, print_day = TRUE,
-                           fixed = NULL,
-                           random = ~ row_f + col_f, plot = TRUE) {
+                           fixed = NULL, random = ~ row_f + col_f,
+                           h2_comp = FALSE, plot = TRUE) {
   
   # Check if specified column were included in the experimental design
   # with the right format.
@@ -206,6 +186,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
   
   G_BLUES_mat <- matrix(NA, nrow = n_geno, ncol = n_days)
   
+  h2 <- rep(NA, n_days)
+  
   if(!single_mixed_model){ # Regular pipeline procedure
     
     # Outliers detection
@@ -267,6 +249,23 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
           BLUE_i <- BLUE_i[geno_id]
           G_BLUES_mat[, i] <- BLUE_i
           
+          
+          
+        }
+        
+        if(h2_comp){ # option to calculate heritability
+          
+          m_h <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
+                                geno.decomp = NULL, genotype.as.random = TRUE,
+                                spatial = ~PSANOVA(col, row, nseg = c(20,20)),
+                                fixed = fixed, random = as.formula(random),
+                                data = data,
+                                control = list(maxit = 50, tolerance = 1e-06,
+                                               monitoring = 1)),
+                          error = function(e) NULL)
+          
+          h2[i] <- getHeritability(m_h)
+          
         }
         
         if(print_day){print(paste('day', day_ind))}
@@ -293,104 +292,119 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
         
       }
       
-      return(G_BLUES_mat)
+      return(list(G_BLUES = G_BLUES_mat, h2 = h2))
       
     }
     
   } else { # Single-step mixed model
     
+    
+    # transform variable into factor
+    
+    exp_des_data$genotype <- factor(exp_des_data$genotype)
+    
+    if(!is.null(fixed)){fixed <- as.formula(fixed)}
+    
+    day_ind <- 1
+    
+    for(i in 1:dim(pheno_data)[2]){
       
-      # transform variable into factor
+      data <- cbind.data.frame(exp_des_data, pheno_data[, i])
+      colnames(data)[dim(data)[2]] <- 'pheno'
       
-      exp_des_data$genotype <- factor(exp_des_data$genotype)
+      p_val <- 0
       
-      if(!is.null(fixed)){fixed <- as.formula(fixed)}
-      
-      day_ind <- 1
-      
-      for(i in 1:dim(pheno_data)[2]){
+      while(p_val < out_p_val){
         
-        data <- cbind.data.frame(exp_des_data, pheno_data[, i])
-        colnames(data)[dim(data)[2]] <- 'pheno'
+        # compute the mixed model
         
-        p_val <- 0
+        m <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
+                            geno.decomp = NULL, genotype.as.random = FALSE,
+                            spatial = ~PSANOVA(col, row, nseg = c(20,20)),
+                            fixed = fixed,
+                            random = as.formula(random),
+                            data = data,
+                            control = list(maxit = 50, tolerance = 1e-06, monitoring = 1)),
+                      error = function(e) NULL)
         
-        while(p_val < out_p_val){
-          
-          # compute the mixed model
-          
-          m <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
-                              geno.decomp = NULL, genotype.as.random = FALSE,
-                              spatial = ~PSANOVA(col, row, nseg = c(20,20)),
-                              fixed = fixed,
-                              random = as.formula(random),
-                              data = data,
-                              control = list(maxit = 50, tolerance = 1e-06, monitoring = 1)),
-                        error = function(e) NULL)
-          
-          # test null
-          
-          if(!is.null(m)){
-            
-            m_resid <- m$residuals
-            
-            test <- grubbs.test(m_resid, type = 10, two.sided = TRUE) # Grubb test
-            p_val <- test$p.value
-            
-            if(p_val < out_p_val){ # test if p_val is lower than ... (presence of an outlier)
-              
-              # remove the outlying value from the data
-              
-              pos_max_res <- which(abs(m_resid) == max(abs(m_resid), na.rm = TRUE))
-              
-              data$pheno[pos_max_res] <- NA
-              
-              
-            }
-            
-          } else{
-            
-            break()
-            
-          }
-          
-        }
-        
+        # test null
         
         if(!is.null(m)){
           
-          pred <- predict(m, which = 'genotype')
-          BLUE_i <- pred$predicted.values
-          names(BLUE_i) <- as.character(pred$genotype)
+          m_resid <- m$residuals
           
-          BLUE_i <- BLUE_i[geno_id]
-          G_BLUES_mat[, i] <- BLUE_i
+          test <- grubbs.test(m_resid, type = 10, two.sided = TRUE) # Grubb test
+          p_val <- test$p.value
+          
+          if(p_val < out_p_val){ # test if p_val is lower than ... (presence of an outlier)
+            
+            # remove the outlying value from the data
+            
+            pos_max_res <- which(abs(m_resid) == max(abs(m_resid), na.rm = TRUE))
+            
+            data$pheno[pos_max_res] <- NA
+            
+            
+          }
+          
+        } else{
+          
+          break()
           
         }
         
-        if(print_day){print(paste('day', day_ind))}
+      }
+      
+      
+      if(!is.null(m)){
         
-        day_ind <- day_ind + 1
+        pred <- predict(m, which = 'genotype')
+        BLUE_i <- pred$predicted.values
+        names(BLUE_i) <- as.character(pred$genotype)
+        
+        BLUE_i <- BLUE_i[geno_id]
+        G_BLUES_mat[, i] <- BLUE_i
         
       }
       
-      rownames(G_BLUES_mat) <- geno_id
-      colnames(G_BLUES_mat) <- day_id
-      
-      if(plot){ # plot the G-BLUEs time series
+      if(h2_comp){ # option to calculate heritability
         
-        dt <- data.frame(geno = rep(geno_id, n_days),
-                         day = rep(1:n_days, each = n_geno),
-                         trait = c(G_BLUES_mat))
+        m_h <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
+                              geno.decomp = NULL, genotype.as.random = TRUE,
+                              spatial = ~PSANOVA(col, row, nseg = c(20,20)),
+                              fixed = fixed, random = as.formula(random),
+                              data = data,
+                              control = list(maxit = 50, tolerance = 1e-06,
+                                             monitoring = 1)),
+                        error = function(e) NULL)
         
-        plot <- ggplot(data = dt, aes(x = day, y = trait, group = geno)) +
-          geom_point() + geom_line(aes(group = geno))
-        
-        print(plot)
+        h2[i] <- getHeritability(m_h)
         
       }
       
-      return(G_BLUES_mat)
+      if(print_day){print(paste('day', day_ind))}
+      
+      day_ind <- day_ind + 1
+      
+    }
+    
+    rownames(G_BLUES_mat) <- geno_id
+    colnames(G_BLUES_mat) <- day_id
+    
+    if(plot){ # plot the G-BLUEs time series
+      
+      dt <- data.frame(geno = rep(geno_id, n_days),
+                       day = rep(1:n_days, each = n_geno),
+                       trait = c(G_BLUES_mat))
+      
+      plot <- ggplot(data = dt, aes(x = day, y = trait, group = geno)) +
+        geom_point() + geom_line(aes(group = geno))
+      
+      print(plot)
+      
+    }
+    
+    return(list(G_BLUES = G_BLUES_mat, h2 = h2))
     
   }
   

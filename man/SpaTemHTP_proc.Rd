@@ -15,6 +15,7 @@ SpaTemHTP_proc(
   print_day = TRUE,
   fixed = NULL,
   random = ~row_f + col_f,
+  h2_comp = FALSE,
   plot = TRUE
 )
 }
@@ -57,6 +58,9 @@ of the SpATS model. Default = NULL.}
 \item{random}{Optional right hand formula object specifying the random effects
 of the SpATS model. Default = ~ row_f + col_f.}
 
+\item{h2_comp}{\code{Logical} value indicating if the should calculate the daily
+genotypic heritability. Default = FALSE.}
+
 \item{plot}{\code{Logical} value specifying if a time series plot of the
 G-BLUEs should be produced. Default = TRUE.}
 }
@@ -70,7 +74,8 @@ missing value imputation). Those data can be used with another software
 (e.g. Genstat) to calculate the genotype BLUEs without spatial adjustment.
 
 If sp_adj = TRUE, matrix of the genotype BLUEs with the genotype in row
-and the day (or measurement time) in column.
+and the day (or measurement time) in column. If h2 = TRUE, the function
+also return a vector with the daily genotypic heritability.
 }
 \description{
 Calculate sequentially the genotype adjusted means (genotype best unbiased
