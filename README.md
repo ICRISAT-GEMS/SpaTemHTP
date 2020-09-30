@@ -8,7 +8,6 @@ SpaTempHTP: Processing and data analysis of high throughput phenotyping data
 
 ## Installation
 
-
 devtools::install_github("ICRISAT-GEMS/SpaTemHTP")
 
 
