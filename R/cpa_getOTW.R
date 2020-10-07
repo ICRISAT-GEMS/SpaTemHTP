@@ -90,7 +90,7 @@ cpa_getOTW <- function(data, h2){
   
   if(any(!IsDate(colnames(data)))){
     
-    stop('colnames data are not all in dd/mm/yyyy Date format')
+    stop('colnames data are not all in dd-mm-yyyy Date format')
     
   }
   
