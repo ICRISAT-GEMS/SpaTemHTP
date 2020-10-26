@@ -15,14 +15,22 @@
 #' x N_days containing the G-BLUEs time series. Such an object can be obtained
 #' with the function \code{\link{SpaTemHTP_proc}}.
 #' 
-#' @param trend \code{numeric} \code{matrix} of dimension n_days containing the
+#' @param trend Optional \code{numeric} \code{matrix} of dimension n_days containing the
 #' values of the trend to be ploted on the top of the time series Default = NULL.
+#' 
+#' @param h2 Optional heritability \code{numeric vector} that will be used to
+#' indicate the day with the highest heritability. Default = NULL.
+#' 
+#' @param TW_lim Optional time window limits \code{numeric vector} that will be
+#' used to indicate the time window limit days. Those values can be obtained with
+#' \code{\link{cpa_getOTW_2}}. Default = NULL.
 #' 
 #' @param main \code{Character} string representing the title of the graph. Default =  'G-BLUEs TS'.
 #'
 #' @return
 #' 
-#' Plot of the G-BLUEs time series
+#' Plot of the G-BLUEs time series. The optional trend will be ploted in red.
+#' The heritability will be ploted in dashed blue and time window limits in black.
 #'
 #' @author Soumyashree Kar, Vincent Garin
 #' 
@@ -55,7 +63,22 @@
 #'
 
 
-plot_TS <- function(data_TS, trend = NULL, main = 'G-BLUEs TS'){
+plot_TS <- function(data_TS, trend = NULL, h2 = NULL, TW_lim = NULL,
+                    main = 'G-BLUEs TS'){
+  
+  if(!is.null(h2)){
+    
+    h2_lines <- geom_vline(xintercept = which.max(h2), linetype="dotted", 
+                           color = "blue", size=1.5)
+    
+  } else {h2_lines <- NULL}
+  
+  if(!is.null(TW_lim)){
+    
+    TW_lines <- geom_vline(xintercept = TW_lim, color = "black", size=1)
+    
+  } else {TW_lines <- NULL}
+  
   
   n_days <- dim(data_TS)[2]
   
@@ -66,7 +89,7 @@ plot_TS <- function(data_TS, trend = NULL, main = 'G-BLUEs TS'){
   if(is.null(trend)){
     
     plot <- ggplot(data = dt, aes(x = day, y = trait, group = geno)) +
-      geom_line(aes(group = geno)) + ggtitle(main)
+      geom_line(aes(group = geno)) + ggtitle(main) + h2_lines + TW_lines
     
     print(plot)
     
@@ -77,7 +100,7 @@ plot_TS <- function(data_TS, trend = NULL, main = 'G-BLUEs TS'){
     
     plot <- ggplot(data = dt, aes(x = day, y = trait, group = geno)) +
       geom_line(aes(group = geno)) + geom_line(data = dt_trend, color = 'red', size = 1) +
-      ggtitle(main)
+      ggtitle(main) + h2_lines + TW_lines
     
     print(plot)
     

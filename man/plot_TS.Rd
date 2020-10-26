@@ -4,20 +4,28 @@
 \alias{plot_TS}
 \title{Plot G-BLUEs time series data}
 \usage{
-plot_TS(data_TS, trend = NULL, main = "G-BLUEs TS")
+plot_TS(data_TS, trend = NULL, h2 = NULL, TW_lim = NULL, main = "G-BLUEs TS")
 }
 \arguments{
 \item{data_TS}{\code{numeric} \code{matrix} of dimension N_genotype 
 x N_days containing the G-BLUEs time series. Such an object can be obtained
 with the function \code{\link{SpaTemHTP_proc}}.}
 
-\item{trend}{\code{numeric} \code{matrix} of dimension n_days containing the
+\item{trend}{Optional \code{numeric} \code{matrix} of dimension n_days containing the
 values of the trend to be ploted on the top of the time series Default = NULL.}
+
+\item{h2}{Optional heritability \code{numeric vector} that will be used to
+indicate the day with the highest heritability. Default = NULL.}
+
+\item{TW_lim}{Optional time window limits \code{numeric vector} that will be
+used to indicate the time window limit days. Those values can be obtained with
+\code{\link{cpa_getOTW_2}}. Default = NULL.}
 
 \item{main}{\code{Character} string representing the title of the graph. Default =  'G-BLUEs TS'.}
 }
 \value{
-Plot of the G-BLUEs time series
+Plot of the G-BLUEs time series. The optional trend will be ploted in red.
+The heritability will be ploted in dashed blue and time window limits in black.
 }
 \description{
 Plot G-BLUEs time series data.
