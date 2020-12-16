@@ -49,6 +49,8 @@
 miss_imp_PMM <- function(data, plot = TRUE){
   
   mice.ip<-data
+  col_nm <- colnames(data) # save colnames for later
+  colnames(mice.ip) <- paste0('t_', 1:dim(data)[2])
   
   # optional plot
   if(plot){
@@ -64,8 +66,11 @@ miss_imp_PMM <- function(data, plot = TRUE){
   imputed_Data <- mice(mice.ip, m=5, maxit = 10, method = 'pmm', seed = 500,
                        printFlag = FALSE)
   
-  #check imputed values
-  OP<-mice::complete(imputed_Data, 5, include = FALSE)
+  # check imputed values
+  OP <- mice ::complete(imputed_Data, 5, include = FALSE)
+  
+  # put back the column name
+  colnames(OP) <- col_nm
   
   return(OP)
 }

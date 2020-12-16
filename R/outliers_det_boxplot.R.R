@@ -54,12 +54,11 @@ outliers_det_boxplot <- function(data, plot = TRUE) {
   
   for(i in 1:ncol(data))
   {
-    df <- data[,i]
-    ol=boxplot(data[i], plot = plot, show.names = T)$out
-    which(df %in% ol)
+    df <- data[, i]
+    ol <- boxplot(data[, i], plot = plot, show.names = T)$out
     df[df %in% ol] <- NA
-    op[,i] <- df
-    
+    op[, i] <- df
   }
+  
   return(op)
 }
