@@ -6,14 +6,12 @@
 #' 
 #' Plot G-BLUEs time series data.
 #' 
-#' The function plots (G-BLUEs) times series data organized by genotype using the
-#' ggplot2 package. Each line represent a specifice genotype or individual.
-#' Using argument 'trend', it is possible to provided an averaged trend over the genotypes
-#' or any other trend that will be plot on the top of the time series.
+#' The function plots the times series data of phenotyping data per genotype
+#' replicate or averaged over genotype replicate using the ggplot2 package.
 #' 
 #' @param data_TS \code{numeric} \code{matrix} of dimension N_genotype 
-#' x N_days containing the G-BLUEs time series. Such an object can be obtained
-#' with the function \code{\link{SpaTemHTP_proc}}.
+#' x N_days containing the phenotype information. the different columns
+#' represent the different time points (e.g. days, hours) of measurement.
 #' 
 #' @param trend Optional \code{numeric} \code{matrix} of dimension n_days containing the
 #' values of the trend to be ploted on the top of the time series Default = NULL.

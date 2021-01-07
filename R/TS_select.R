@@ -102,11 +102,17 @@ TS_select <- function(data, h2, method = 'CPA', interval = 0){
   
   # data colnames format
   
-  if(any(!IsDate(colnames(data)))){
-
-    stop('colnames data are not all in dd-mm-yyyy Date format')
-
+  if(method == 'CPA'){
+    
+    if(any(!IsDate(colnames(data)))){
+      
+      stop('colnames data are not all in dd-mm-yyyy Date format')
+      
+    }
+    
   }
+  
+  
   
   # h2 format
   
