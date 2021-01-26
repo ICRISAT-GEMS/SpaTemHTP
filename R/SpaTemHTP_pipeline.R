@@ -362,13 +362,14 @@ SpaTemHTP_pipeline <- function(exp_id = 'exp_x', trait_id = 'trait_i',
                               print_day = FALSE, plot = FALSE)
     
     G_BLUES_TS_data <- G_BLUEs$G_BLUES
+    G_BLUES_stdev <- G_BLUEs_std
     h2 <- G_BLUEs$h2
     
     # save the data in .csv file
-    write.csv(x = G_BLUES_TS_data, file = file.path(fold_loc, 'G_BLUES_TS_data.csv'),
-              row.names = FALSE)
+    write.csv(x = G_BLUES_TS_data, file = file.path(fold_loc, 'G_BLUES_TS_data.csv'))
     
-    # save the data in .csv file
+    write.csv(x = G_BLUES_stdev, file = file.path(fold_loc, 'G_BLUES_stdev.csv'))
+    
     write.csv(x = h2, file = file.path(fold_loc, 'heritability_values.csv'),
               row.names = FALSE)
     

@@ -16,6 +16,7 @@ SpaTemHTP_proc(
   fixed = NULL,
   random = ~row_f + col_f,
   h2_comp = FALSE,
+  h2_comp_alt = FALSE,
   plot = TRUE
 )
 }
@@ -61,6 +62,9 @@ of the SpATS model. Default = ~ row_f + col_f.}
 \item{h2_comp}{\code{Logical} value indicating if the should calculate the daily
 genotypic heritability. Default = FALSE.}
 
+\item{h2_comp_alt}{\code{Logical} value indicating if the should calculate the daily
+genotypic heritability. Default = FALSE.}
+
 \item{plot}{\code{Logical} value specifying if a time series plot of the
 G-BLUEs should be produced. Default = TRUE.}
 }
@@ -73,9 +77,15 @@ the matrix of data after eventual processing operation (outlier detection,
 missing value imputation). Those data can be used with another software
 (e.g. Genstat) to calculate the genotype BLUEs without spatial adjustment.
 
-If sp_adj = TRUE, matrix of the genotype BLUEs with the genotype in row
-and the day (or measurement time) in column. If h2 = TRUE, the function
-also return a vector with the daily genotypic heritability.
+If sp_adj = TRUE, list containing the following objects
+
+\item{G_BLUES}{\code{Matrix} of the genotype BLUEs with the genotype in row
+and the day (or measurement time) in column.}
+
+\item{G_BLUES_stdev}{\code{Matrix} of the genotype BLUEs standard deviation
+with the genotype in row and the day (or measurement time) in column.}
+
+\item{h2}{\code{Vector} with the daily genotypic heritability.}
 }
 \description{
 Calculate sequentially the genotype adjusted means (genotype best unbiased
@@ -93,10 +103,17 @@ that specifies the fixed and random part of the mixed model used to
 calculate the genotypes BLUEs. The spatially adjusted model are fitted
 using function from the SpATS package (Rodgriguez-Alvarez et al., 2018).
 
-If single_mixed_model = TRUE, the function calculates a single-step mixed
+If \code{single_mixed_model = TRUE}, the function calculates a single-step mixed
 model where outliers are iteratively removed based on the model residuals
 and the missing values imputed during the estimation procedure. The outliers
 are detected using a Grubb Test (p<0.05, default).
+
+If \code{h2_comp = TRUE}, the function calculate the heritability from the
+computed SpATS model. If \code{h2_comp_alt = TRUE}, if the heritability
+computation fail with the SpATS model, the function calculates the
+heritability using a classicle linear mixed model (pheno = rep (F) + 
+row (R) + col (R) + genotype (R) + e). The formula used in the following
+h2 = Sgeno / (Sgeno + (Se/n_rep)).
 }
 \examples{
 

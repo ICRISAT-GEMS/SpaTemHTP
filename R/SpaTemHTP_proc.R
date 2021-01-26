@@ -18,10 +18,17 @@
 #' calculate the genotypes BLUEs. The spatially adjusted model are fitted
 #' using function from the SpATS package (Rodgriguez-Alvarez et al., 2018).
 #' 
-#' If single_mixed_model = TRUE, the function calculates a single-step mixed
+#' If \code{single_mixed_model = TRUE}, the function calculates a single-step mixed
 #' model where outliers are iteratively removed based on the model residuals
 #' and the missing values imputed during the estimation procedure. The outliers
 #' are detected using a Grubb Test (p<0.05, default).
+#' 
+#' If \code{h2_comp = TRUE}, the function calculate the heritability from the
+#' computed SpATS model. If \code{h2_comp_alt = TRUE}, if the heritability
+#' computation fail with the SpATS model, the function calculates the
+#' heritability using a classicle linear mixed model (pheno = rep (F) + 
+#' row (R) + col (R) + genotype (R) + e). The formula used in the following
+#' h2 = Sgeno / (Sgeno + (Se/n_rep)). 
 #' 
 #' @param exp_des_data \code{data.frame} of dimension (N_genotype * N_replicate)
 #' x N_variable containing the experimental design information. It must include:
@@ -64,6 +71,9 @@
 #' @param h2_comp \code{Logical} value indicating if the should calculate the daily
 #' genotypic heritability. Default = FALSE.
 #' 
+#' @param h2_comp_alt \code{Logical} value indicating if the should calculate the daily
+#' genotypic heritability. Default = FALSE.
+#' 
 #' @param plot \code{Logical} value specifying if a time series plot of the
 #' G-BLUEs should be produced. Default = TRUE.
 #' 
@@ -76,9 +86,16 @@
 #' missing value imputation). Those data can be used with another software
 #' (e.g. Genstat) to calculate the genotype BLUEs without spatial adjustment.
 #' 
-#' If sp_adj = TRUE, matrix of the genotype BLUEs with the genotype in row
-#' and the day (or measurement time) in column. If h2 = TRUE, the function
-#' also return a vector with the daily genotypic heritability.
+#' If sp_adj = TRUE, list containing the following objects
+#' 
+#' \item{G_BLUES}{\code{Matrix} of the genotype BLUEs with the genotype in row
+#' and the day (or measurement time) in column.}
+#' 
+#' \item{G_BLUES_stdev}{\code{Matrix} of the genotype BLUEs standard deviation
+#' with the genotype in row and the day (or measurement time) in column.}
+#' 
+#' \item{h2}{\code{Vector} with the daily genotypic heritability.}
+#' 
 #'
 #' @author Soumyashree Kar, Vincent Garin
 #' 
@@ -121,7 +138,7 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
                            single_mixed_model = FALSE,
                            out_p_val = 0.05, print_day = TRUE,
                            fixed = NULL, random = ~ row_f + col_f,
-                           h2_comp = FALSE, plot = TRUE) {
+                           h2_comp = FALSE, h2_comp_alt = FALSE, plot = TRUE) {
   
   # Check if specified column were included in the experimental design
   # with the right format.
@@ -181,11 +198,12 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
   geno_id <- unique(exp_des_data$genotype)
   geno_id <- as.character(geno_id)
   n_geno <- length(geno_id)
+  n_rep <- length(unique(exp_des_data$rep))
   
   # Space to store the results
   
   G_BLUES_mat <- matrix(NA, nrow = n_geno, ncol = n_days)
-  
+  G_BLUES_stdev_mat <- matrix(NA, nrow = n_geno, ncol = n_days)
   h2 <- rep(NA, n_days)
   
   if(!single_mixed_model){ # Regular pipeline procedure
@@ -225,6 +243,7 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
       if(!is.null(fixed)){fixed <- as.formula(fixed)}
       
       day_ind <- 1
+      h2_lm <- rep(FALSE, n_days)
       
       for(i in 1:dim(pheno_data)[2]){
         
@@ -244,12 +263,15 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
           
           pred <- predict(m, which = 'genotype')
           BLUE_i <- pred$predicted.values
+          BLUE_stdev_i <- pred$standard.errors
           names(BLUE_i) <- as.character(pred$genotype)
+          names(BLUE_stdev_i) <- as.character(pred$genotype)
           
           BLUE_i <- BLUE_i[geno_id]
           G_BLUES_mat[, i] <- BLUE_i
           
-          
+          BLUE_stdev_i <- BLUE_stdev_i[geno_id]
+          G_BLUES_stdev_mat[, i] <- BLUE_stdev_i
           
         }
         
@@ -264,7 +286,32 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
                                                monitoring = 1)),
                           error = function(e) NULL)
           
-          h2[i] <- getHeritability(m_h)
+          if(!is.null(m_h)){
+            
+            h2[i] <- getHeritability(m_h)
+            
+          } else {
+            
+            if(h2_comp_alt){
+              
+              m_h <- tryCatch(lmer(formula = pheno ~  rep + (1|row_f) +
+                                     (1|col_f) + (1|genotype),
+                                   REML = TRUE, data = data), error = function(e) NULL)
+              
+              if(!is.null(m_h)){
+                
+                remat <- summary(m_h)
+                Se <- remat$sigma^2
+                V_var <- remat$varcor
+                Sg <- V_var$genotype[1, 1]
+                h2[i] <- (Sg)/(Sg + (Se/(n_rep)))
+                h2_lm[i] <- TRUE
+                
+              }
+              
+            }
+            
+          }
           
         }
         
@@ -279,6 +326,9 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
       rownames(G_BLUES_mat) <- geno_id
       colnames(G_BLUES_mat) <- day_id
       
+      rownames(G_BLUES_stdev_mat) <- geno_id
+      colnames(G_BLUES_stdev_mat) <- day_id
+      
       if(plot){ # plot the G-BLUEs time series
         
         dt <- data.frame(geno = rep(geno_id, n_days),
@@ -292,7 +342,13 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
         
       }
       
-      return(list(G_BLUES = G_BLUES_mat, h2 = h2))
+      if(any(h2_lm)){
+        n_h2_lm <- sum(h2_lm)
+        warn_mess <- paste0(n_h2_lm, '/', n_days, ' h2 computation were performed using a classical linear mixed model and not the SpATS model.')
+        warning(warn_mess)
+      }
+      
+      return(list(G_BLUES = G_BLUES_mat, G_BLUES_stdev = G_BLUES_stdev_mat, h2 = h2))
       
     }
     
@@ -306,6 +362,7 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
     if(!is.null(fixed)){fixed <- as.formula(fixed)}
     
     day_ind <- 1
+    h2_lm <- rep(FALSE, n_days)
     
     for(i in 1:dim(pheno_data)[2]){
       
@@ -360,10 +417,15 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
         
         pred <- predict(m, which = 'genotype')
         BLUE_i <- pred$predicted.values
+        BLUE_stdev_i <- pred$standard.errors
         names(BLUE_i) <- as.character(pred$genotype)
+        names(BLUE_stdev_i) <- as.character(pred$genotype)
         
         BLUE_i <- BLUE_i[geno_id]
         G_BLUES_mat[, i] <- BLUE_i
+        
+        BLUE_stdev_i <- BLUE_stdev_i[geno_id]
+        G_BLUES_stdev_mat[, i] <- BLUE_stdev_i
         
       }
       
@@ -378,7 +440,32 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
                                              monitoring = 1)),
                         error = function(e) NULL)
         
-        h2[i] <- getHeritability(m_h)
+        if(!is.null(m_h)){
+          
+          h2[i] <- getHeritability(m_h)
+          
+        } else {
+          
+          if(h2_comp_alt){
+            
+            m_h <- tryCatch(lmer(formula = pheno ~  rep + (1|row_f) +
+                                   (1|col_f) + (1|genotype),
+                                 REML = TRUE, data = data), error = function(e) NULL)
+            
+            if(!is.null(m_h)){
+              
+              remat <- summary(m_h)
+              Se <- remat$sigma^2
+              V_var <- remat$varcor
+              Sg <- V_var$genotype[1, 1]
+              h2[i] <- (Sg)/(Sg + (Se/(n_rep)))
+              h2_lm[i] <- TRUE
+              
+            }
+            
+          }
+          
+        }
         
       }
       
@@ -390,6 +477,9 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
     
     rownames(G_BLUES_mat) <- geno_id
     colnames(G_BLUES_mat) <- day_id
+    
+    rownames(G_BLUES_stdev_mat) <- geno_id
+    colnames(G_BLUES_stdev_mat) <- day_id
     
     if(plot){ # plot the G-BLUEs time series
       
@@ -404,7 +494,13 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
       
     }
     
-    return(list(G_BLUES = G_BLUES_mat, h2 = h2))
+    if(any(h2_lm)){
+      n_h2_lm <- sum(h2_lm)
+      warn_mess <- paste0(n_h2_lm, '/', n_days, ' h2 computation were performed using a classical linear mixed model and not the SpATS model.')
+      warning(warn_mess)
+    }
+    
+    return(list(G_BLUES = G_BLUES_mat, G_BLUES_stdev = G_BLUES_stdev_mat, h2 = h2))
     
   }
   

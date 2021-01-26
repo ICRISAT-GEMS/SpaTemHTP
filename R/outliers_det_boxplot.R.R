@@ -37,6 +37,7 @@
 #' @import ecp
 #' @import ggplot2
 #' @import kernlab
+#' @import lme4
 #' @import mice
 #' @import outliers
 #' @import SpATS
