@@ -15,9 +15,13 @@ SpaTemHTP_proc(
   print_day = TRUE,
   fixed = NULL,
   random = ~row_f + col_f,
-  h2_comp = FALSE,
-  h2_comp_alt = FALSE,
-  plot = TRUE
+  h2_comp = TRUE,
+  h2_comp_alt = TRUE,
+  plot = TRUE,
+  plot_out = TRUE,
+  plot_miss = TRUE,
+  plot_SpATS = TRUE,
+  res_folder = NULL
 )
 }
 \arguments{
@@ -60,13 +64,28 @@ of the SpATS model. Default = NULL.}
 of the SpATS model. Default = ~ row_f + col_f.}
 
 \item{h2_comp}{\code{Logical} value indicating if the should calculate the daily
-genotypic heritability. Default = FALSE.}
+genotypic heritability. Default = TRUE.}
 
 \item{h2_comp_alt}{\code{Logical} value indicating if the should calculate the daily
-genotypic heritability. Default = FALSE.}
+genotypic heritability. Default = TRUE.}
 
 \item{plot}{\code{Logical} value specifying if a time series plot of the
 G-BLUEs should be produced. Default = TRUE.}
+
+\item{plot_out}{\code{Logical} value specifying if the boxplots of the outlier
+detection should be saved at the specified location (\code{res_folder}).
+Default = TRUE.}
+
+\item{plot_miss}{\code{Logical} value specifying if the plot of the missing
+values imputation should be saved at the specified location (\code{res_folder}).
+Default = TRUE.}
+
+\item{plot_SpATS}{\code{Logical} value specifying if the plot of the
+spatial adjustment should be saved at the specified location (\code{res_folder}).
+Default = TRUE.}
+
+\item{res_folder}{\code{Character} string specifying the path where the plot
+results will be saved. Default = NULL.}
 }
 \value{
 Return:
@@ -133,7 +152,8 @@ exp_des_data = SG_PH_data[, c("row", "col", "row_f", "col_f","genotype",
 G_BLUEs <- SpaTemHTP_proc(exp_des_data, pheno_data = SG_PH_data[, 6:28],
                           out_det = TRUE, miss_imp = TRUE, sp_adj = TRUE,
                           random = ~ rep +  rep:block + row_f + col_f,
-                          plot = TRUE)
+                          plot = TRUE, plot_out = FALSE, plot_miss = FALSE,
+                          plot_SpATS = FALSE)
 
 }
 

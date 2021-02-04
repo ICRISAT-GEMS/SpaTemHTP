@@ -69,14 +69,28 @@
 #' of the SpATS model. Default = ~ row_f + col_f.
 #' 
 #' @param h2_comp \code{Logical} value indicating if the should calculate the daily
-#' genotypic heritability. Default = FALSE.
+#' genotypic heritability. Default = TRUE.
 #' 
 #' @param h2_comp_alt \code{Logical} value indicating if the should calculate the daily
-#' genotypic heritability. Default = FALSE.
+#' genotypic heritability. Default = TRUE.
 #' 
 #' @param plot \code{Logical} value specifying if a time series plot of the
 #' G-BLUEs should be produced. Default = TRUE.
 #' 
+#' @param plot_out \code{Logical} value specifying if the boxplots of the outlier
+#' detection should be saved at the specified location (\code{res_folder}).
+#' Default = TRUE.
+#' 
+#' @param plot_miss \code{Logical} value specifying if the plot of the missing
+#' values imputation should be saved at the specified location (\code{res_folder}).
+#' Default = TRUE.
+#' 
+#' @param plot_SpATS \code{Logical} value specifying if the plot of the
+#' spatial adjustment should be saved at the specified location (\code{res_folder}).
+#' Default = TRUE.
+#' 
+#' @param res_folder \code{Character} string specifying the path where the plot
+#' results will be saved. Default = NULL.
 #' 
 #' @return Return:
 #' 
@@ -125,7 +139,8 @@
 #' G_BLUEs <- SpaTemHTP_proc(exp_des_data, pheno_data = SG_PH_data[, 6:28],
 #'                           out_det = TRUE, miss_imp = TRUE, sp_adj = TRUE,
 #'                           random = ~ rep +  rep:block + row_f + col_f,
-#'                           plot = TRUE)
+#'                           plot = TRUE, plot_out = FALSE, plot_miss = FALSE,
+#'                           plot_SpATS = FALSE)
 #' 
 #' }
 #'
@@ -138,7 +153,9 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
                            single_mixed_model = FALSE,
                            out_p_val = 0.05, print_day = TRUE,
                            fixed = NULL, random = ~ row_f + col_f,
-                           h2_comp = FALSE, h2_comp_alt = FALSE, plot = TRUE) {
+                           h2_comp = TRUE, h2_comp_alt = TRUE, plot = TRUE,
+                           plot_out = TRUE, plot_miss = TRUE,
+                           plot_SpATS = TRUE, res_folder = NULL) {
   
   # Check if specified column were included in the experimental design
   # with the right format.
@@ -189,6 +206,24 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
     stop('The row_f information in exp_des_data must be factor')
   }
   
+  if(plot_out | plot_miss | plot_SpATS){
+    
+    if(is.null(res_folder)){
+      
+      stop('No folder path was specified for argument res_folder.')
+      
+    }
+    
+    if(file.exists(res_folder)){
+      
+      res_dir <- file.path(res_folder, 'plots')
+      dir.create(res_dir)
+      
+      
+    } else { stop('The path specified in res_fold argument is not valid.') }
+    
+  }
+  
   ##############
   
   # Keep day identifiers and genotype names
@@ -211,14 +246,30 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
     # Outliers detection
     if(out_det) {
       
-      pheno_data <- outliers_det_boxplot(data = pheno_data)
+      if(plot_out){
+        
+        pdf(file.path(res_dir, 'plot_outlier.pdf'))
+        pheno_data <- outliers_det_boxplot(data = pheno_data, plot = TRUE)
+        dev.off()
+        
+      } else{
+        pheno_data <- outliers_det_boxplot(data = pheno_data, plot = FALSE)
+      }
       
     }
     
     # Missing values imputation
     if(miss_imp){
       
-      pheno_data <- miss_imp_PMM(data = pheno_data)
+      if(plot_miss){
+        
+        pdf(file.path(res_dir, 'plot_missing.pdf'))
+        pheno_data <- miss_imp_PMM(data = pheno_data, plot = TRUE)
+        dev.off()
+        
+      } else{
+        pheno_data <- miss_imp_PMM(data = pheno_data, plot = FALSE)
+      }
       
     }
     
@@ -244,6 +295,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
       
       day_ind <- 1
       h2_lm <- rep(FALSE, n_days)
+      
+      if(plot_SpATS){pdf(file.path(res_dir, 'plot_SpATS.pdf'))}
       
       for(i in 1:dim(pheno_data)[2]){
         
@@ -272,6 +325,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
           
           BLUE_stdev_i <- BLUE_stdev_i[geno_id]
           G_BLUES_stdev_mat[, i] <- BLUE_stdev_i
+          
+          if(plot_SpATS){plot(m)}
           
         }
         
@@ -323,6 +378,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
         
       }
       
+      if(plot_SpATS){dev.off()}
+      
       rownames(G_BLUES_mat) <- geno_id
       colnames(G_BLUES_mat) <- day_id
       
@@ -363,6 +420,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
     
     day_ind <- 1
     h2_lm <- rep(FALSE, n_days)
+    
+    if(plot_SpATS){pdf(file.path(res_dir, 'plot_SpATS.pdf'))}
     
     for(i in 1:dim(pheno_data)[2]){
       
@@ -427,6 +486,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
         BLUE_stdev_i <- BLUE_stdev_i[geno_id]
         G_BLUES_stdev_mat[, i] <- BLUE_stdev_i
         
+        if(plot_SpATS){plot(m)}
+        
       }
       
       if(h2_comp){ # option to calculate heritability
@@ -474,6 +535,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
       day_ind <- day_ind + 1
       
     }
+    
+    if(plot_SpATS){dev.off()}
     
     rownames(G_BLUES_mat) <- geno_id
     colnames(G_BLUES_mat) <- day_id
