@@ -105,6 +105,10 @@
 #' @param random Optional right hand formula object specifying the random effects
 #' of the SpATS model. Default = ~ row_f + col_f.
 #' 
+#' @param spatial \code{Character} string specifying the methode used to calculate
+#' the spatial surface. must be one of: 'SAP', 'PSANOVA', 'SAP_if_PSANOVA_fail',
+#' 'PSANOVA_if_SAP_fail'.
+#' 
 #' @return
 #' 
 #' For each chosen options, the function will save the produced data in
@@ -112,7 +116,7 @@
 #' 
 #' ... (develop further)
 #'
-#' @author Vincent Garin, Subhash Degala
+#' @author ICRISAT GEMS team
 #'
 #' @examples
 #'
@@ -135,7 +139,7 @@
 #' 
 #' results <- SpaTemHTP_pipeline(exp_id = 'Exp_XX', trait_id = 'trait_1',
 #' out_loc = out_loc, exp_des_data = exp_des_data, pheno_data = pheno_data,
-#' random = ~ rep +  rep:block + row_f + col_f)
+#' random = ~ rep +  rep:block + row_f + col_f, spatial = 'PSANOVA')
 #' 
 #' }
 #'
@@ -182,7 +186,8 @@ SpaTemHTP_pipeline <- function(exp_id = 'exp_x', trait_id = 'trait_i',
                                G_BLUES_TS_log_curve = TRUE,
                                out_det = TRUE, miss_imp = TRUE, sp_adj = TRUE,
                                single_mixed_model = FALSE, out_p_val = 0.05,
-                               fixed = NULL, random = ~ row_f + col_f) {
+                               fixed = NULL, random = ~ row_f + col_f,
+                               spatial) {
   
   
   ### Check data format
@@ -358,7 +363,7 @@ SpaTemHTP_pipeline <- function(exp_id = 'exp_x', trait_id = 'trait_i',
                               sp_adj = sp_adj,
                               single_mixed_model = single_mixed_model,
                               out_p_val = out_p_val, fixed = fixed,
-                              random = random, h2_comp = TRUE,
+                              random = random, spatial = spatial, h2_comp = TRUE,
                               print_day = FALSE, plot = FALSE)
     
     G_BLUES_TS_data <- G_BLUEs$G_BLUES

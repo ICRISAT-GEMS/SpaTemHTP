@@ -15,6 +15,7 @@ SpaTemHTP_proc(
   print_day = TRUE,
   fixed = NULL,
   random = ~row_f + col_f,
+  spatial,
   h2_comp = TRUE,
   h2_comp_alt = TRUE,
   plot = TRUE,
@@ -62,6 +63,10 @@ of the SpATS model. Default = NULL.}
 
 \item{random}{Optional right hand formula object specifying the random effects
 of the SpATS model. Default = ~ row_f + col_f.}
+
+\item{spatial}{\code{Character} string specifying the methode used to calculate
+the spatial surface. must be one of: 'SAP', 'PSANOVA', 'SAP_if_PSANOVA_fail',
+'PSANOVA_if_SAP_fail'.}
 
 \item{h2_comp}{\code{Logical} value indicating if the should calculate the daily
 genotypic heritability. Default = TRUE.}
@@ -122,6 +127,11 @@ that specifies the fixed and random part of the mixed model used to
 calculate the genotypes BLUEs. The spatially adjusted model are fitted
 using function from the SpATS package (Rodgriguez-Alvarez et al., 2018).
 
+The methode used to calculate the spatial surface can be specified in
+argument 'spatial'. The user can choose between 'SAP' and 'PSANOVA'. The
+user can also try the alternative method if one is failing by selecting
+'SAP_if_PSANOVA_fail' or 'PSANOVA_if_SAP_fail'.
+
 If \code{single_mixed_model = TRUE}, the function calculates a single-step mixed
 model where outliers are iteratively removed based on the model residuals
 and the missing values imputed during the estimation procedure. The outliers
@@ -152,6 +162,7 @@ exp_des_data = SG_PH_data[, c("row", "col", "row_f", "col_f","genotype",
 G_BLUEs <- SpaTemHTP_proc(exp_des_data, pheno_data = SG_PH_data[, 6:28],
                           out_det = TRUE, miss_imp = TRUE, sp_adj = TRUE,
                           random = ~ rep +  rep:block + row_f + col_f,
+                          spatial = 'PSANOVA',
                           plot = TRUE, plot_out = FALSE, plot_miss = FALSE,
                           plot_SpATS = FALSE)
 

@@ -18,6 +18,11 @@
 #' calculate the genotypes BLUEs. The spatially adjusted model are fitted
 #' using function from the SpATS package (Rodgriguez-Alvarez et al., 2018).
 #' 
+#' The methode used to calculate the spatial surface can be specified in
+#' argument 'spatial'. The user can choose between 'SAP' and 'PSANOVA'. The
+#' user can also try the alternative method if one is failing by selecting
+#' 'SAP_if_PSANOVA_fail' or 'PSANOVA_if_SAP_fail'.
+#' 
 #' If \code{single_mixed_model = TRUE}, the function calculates a single-step mixed
 #' model where outliers are iteratively removed based on the model residuals
 #' and the missing values imputed during the estimation procedure. The outliers
@@ -67,6 +72,10 @@
 #' 
 #' @param random Optional right hand formula object specifying the random effects
 #' of the SpATS model. Default = ~ row_f + col_f.
+#' 
+#' @param spatial \code{Character} string specifying the methode used to calculate
+#' the spatial surface. must be one of: 'SAP', 'PSANOVA', 'SAP_if_PSANOVA_fail',
+#' 'PSANOVA_if_SAP_fail'.
 #' 
 #' @param h2_comp \code{Logical} value indicating if the should calculate the daily
 #' genotypic heritability. Default = TRUE.
@@ -139,6 +148,7 @@
 #' G_BLUEs <- SpaTemHTP_proc(exp_des_data, pheno_data = SG_PH_data[, 6:28],
 #'                           out_det = TRUE, miss_imp = TRUE, sp_adj = TRUE,
 #'                           random = ~ rep +  rep:block + row_f + col_f,
+#'                           spatial = 'PSANOVA',
 #'                           plot = TRUE, plot_out = FALSE, plot_miss = FALSE,
 #'                           plot_SpATS = FALSE)
 #' 
@@ -153,6 +163,7 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
                            single_mixed_model = FALSE,
                            out_p_val = 0.05, print_day = TRUE,
                            fixed = NULL, random = ~ row_f + col_f,
+                           spatial,
                            h2_comp = TRUE, h2_comp_alt = TRUE, plot = TRUE,
                            plot_out = TRUE, plot_miss = TRUE,
                            plot_SpATS = TRUE, res_folder = NULL) {
@@ -204,6 +215,12 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
   if(!is.factor(exp_des_data$row_f)){
     
     stop('The row_f information in exp_des_data must be factor')
+  }
+  
+  if(!(spatial %in% c('SAP', 'PSANOVA', 'SAP_if_PSANOVA_fail', 'PSANOVA_if_SAP_fail'))){
+    
+    stop("spatial argument must be one of those: 'SAP', 'PSANOVA', 'SAP_if_PSANOVA_fail', or 'PSANOVA_if_SAP_fail'.")
+    
   }
   
   if(plot_out | plot_miss | plot_SpATS){
@@ -303,14 +320,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
         data <- cbind.data.frame(exp_des_data, pheno_data[, i])
         colnames(data)[dim(data)[2]] <- 'pheno'
         
-        m <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
-                            geno.decomp = NULL, genotype.as.random = FALSE,
-                            spatial = ~PSANOVA(col, row, nseg = c(20,20)),
-                            fixed = fixed,
-                            random = as.formula(random),
-                            data = data,
-                            control = list(maxit = 50, tolerance = 1e-06, monitoring = 1)),
-                      error = function(e) NULL)
+        m <- SpATS_model_comp(spatial = spatial, fixed = fixed, random = random,
+                              data = data, genotype.as.random = FALSE)
         
         if(!is.null(m)){
           
@@ -332,14 +343,10 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
         
         if(h2_comp){ # option to calculate heritability
           
-          m_h <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
-                                geno.decomp = NULL, genotype.as.random = TRUE,
-                                spatial = ~PSANOVA(col, row, nseg = c(20,20)),
-                                fixed = fixed, random = as.formula(random),
-                                data = data,
-                                control = list(maxit = 50, tolerance = 1e-06,
-                                               monitoring = 1)),
-                          error = function(e) NULL)
+          
+          m_h <- SpATS_model_comp(spatial = spatial, fixed = fixed,
+                                  random = random, data = data,
+                                  genotype.as.random = TRUE)
           
           if(!is.null(m_h)){
             
@@ -434,16 +441,8 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
         
         # compute the mixed model
         
-        m <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
-                            geno.decomp = NULL, genotype.as.random = FALSE,
-                            spatial = ~PSANOVA(col, row, nseg = c(20,20)),
-                            fixed = fixed,
-                            random = as.formula(random),
-                            data = data,
-                            control = list(maxit = 50, tolerance = 1e-06, monitoring = 1)),
-                      error = function(e) NULL)
-        
-        # test null
+        m <- SpATS_model_comp(spatial = spatial, fixed = fixed, random = random,
+                              data = data, genotype.as.random = FALSE)
         
         if(!is.null(m)){
           
@@ -492,14 +491,9 @@ SpaTemHTP_proc <- function(exp_des_data, pheno_data, out_det = TRUE,
       
       if(h2_comp){ # option to calculate heritability
         
-        m_h <- tryCatch(SpATS(response = "pheno", genotype = "genotype",
-                              geno.decomp = NULL, genotype.as.random = TRUE,
-                              spatial = ~PSANOVA(col, row, nseg = c(20,20)),
-                              fixed = fixed, random = as.formula(random),
-                              data = data,
-                              control = list(maxit = 50, tolerance = 1e-06,
-                                             monitoring = 1)),
-                        error = function(e) NULL)
+        m_h <- SpATS_model_comp(spatial = spatial, fixed = fixed,
+                                random = random, data = data,
+                                genotype.as.random = TRUE)
         
         if(!is.null(m_h)){
           
